@@ -2,6 +2,7 @@ version: '3.8'
 services:
   app:
     build: .
+    network_mode: host
     container_name: uniswap-listener
     working_dir: /usr/src/app
     volumes:
