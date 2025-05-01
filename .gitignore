@@ -1,0 +1,19 @@
+# .gitignore
+# Node.js
+node_modules/
+dist/
+.env
+*.log
+
+# pnpm
+.pnpm-debug.log
+.pnpm-store/
+
+# TypeScript
+*.tsbuildinfo
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/

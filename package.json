@@ -1,0 +1,20 @@
+{
+  "name": "uni-v3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.10.0",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "ethers": "^6.13.7"
+  }
+}

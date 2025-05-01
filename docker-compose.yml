@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: uniswap-listener
+    working_dir: /usr/src/app
+    volumes:
+      - .:/usr/src/app
+    environment:
+      - ALCHEMY_WSS_URL=${ALCHEMY_WSS_URL}  # 从 .env 文件获取
+      - ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
+    restart: unless-stopped
