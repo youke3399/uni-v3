@@ -8,8 +8,5 @@ COPY . .
 RUN npm install -g pnpm
 
 # 安装依赖并构建
-RUN pnpm install
+RUN pnpm install --force
 RUN pnpm build
-
-# 启动应用
-CMD ["pnpm", "start"]

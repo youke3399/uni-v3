@@ -1,12 +1,26 @@
-import { ethers, EventLog } from "ethers";
+import { ethers } from "ethers";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const poolAddress = "0xe42318eA3b998e8355a3Da364EB9D48eC725Eb45"; // weth/rpl
+// const poolAddress = "0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36"; // weth/usdt
 
 const poolAbi = [
-    "event Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)"
+    {
+        "anonymous": false,
+        "inputs": [
+            { "indexed": true, "name": "sender", "type": "address" },
+            { "indexed": true, "name": "recipient", "type": "address" },
+            { "indexed": false, "name": "amount0", "type": "int256" },
+            { "indexed": false, "name": "amount1", "type": "int256" },
+            { "indexed": false, "name": "sqrtPriceX96", "type": "uint160" },
+            { "indexed": false, "name": "liquidity", "type": "uint128" },
+            { "indexed": false, "name": "tick", "type": "int24" }
+        ],
+        "name": "Swap",
+        "type": "event"
+    }
 ];
 
 let provider: ethers.WebSocketProvider;
@@ -14,7 +28,7 @@ let poolContract: ethers.Contract;
 let lastActivityAt = Date.now();
 
 // Swap 事件处理逻辑
-async function handleSwap(
+function handleSwap(
     sender: string,
     recipient: string,
     amount0: bigint,
@@ -22,8 +36,8 @@ async function handleSwap(
     sqrtPriceX96: bigint,
     liquidity: bigint,
     tick: number,
-    event: EventLog
-): Promise<void> {
+    event: any
+): void {
     lastActivityAt = Date.now();
     try {
         const timestamp = new Date().toISOString();
@@ -31,16 +45,12 @@ async function handleSwap(
         const amount0Formatted = ethers.formatUnits(amount0, 18);
         const amount1Formatted = ethers.formatUnits(amount1, 18);
 
-        // 获取 token0 和 token1 的信息
-        // const token0 = new Token(1, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", 18, "WETH", "Wrapped Ether");
-        // const token1 = new Token(1, "0xD33526068D116cE69F19A9ee46F0bd304F21A51f", 18, "RPL", "Rocket Pool");
-
         console.log(`\n=== [${timestamp}] Swap Detected ===`);
-        console.log(`Transaction Hash: ${event.transactionHash}`);
+        console.log(`Transaction Hash: ${event.log.transactionHash}`);
         console.log(`Sender: ${sender}`);
         console.log(`Recipient: ${recipient}`);
         console.log(`Amount0 weth: ${amount0Formatted}`);
-        console.log(`Amount1 rpl: ${amount1Formatted}`);
+        console.log(`Amount1 usdt: ${amount1Formatted}`);
         console.log(`Current sqrtPriceX96: ${sqrtPriceX96.toString()}`);
         const price = (sqrtPriceX96 * sqrtPriceX96) / (BigInt(2) ** BigInt(192));
         const priceFloat = Number(price.toString()) / 1e18;
@@ -49,14 +59,6 @@ async function handleSwap(
         console.log(`Price (weth/rpl): ${inversePrice.toFixed(6)}`);
         console.log(`Liquidity: ${liquidity.toString()}`);
         console.log(`Tick: ${tick}`);
-
-        const tx = await provider.getTransaction(event.transactionHash);
-        if(tx){
-            console.log(`From: ${tx.from}`);
-        }else{
-            console.warn(`Transaction not found for hash: ${event.transactionHash}`);
-        }        
-
     } catch (err) {
         console.error("Error in handleSwap:", err);
     }
@@ -73,7 +75,7 @@ async function createProvider(): Promise<void> {
         poolContract = new ethers.Contract(poolAddress, poolAbi, provider);
         await setupSwapListener();
 
-        // 每 12 秒检查一次连接状态
+        // 每 30 秒检查一次连接状态
         setInterval(async () => {
             try {
                 await provider.getBlockNumber();  // Ping to keep connection alive
@@ -81,7 +83,7 @@ async function createProvider(): Promise<void> {
                 console.error("WebSocket lost connection. Reconnecting...");
                 await reconnect();
             }
-        }, 12000);
+        }, 30000);
 
         // 每 60 秒检查事件监听器是否仍然存在
         setInterval(async () => {
@@ -97,31 +99,18 @@ async function createProvider(): Promise<void> {
 // 注册 Swap 事件监听器
 async function setupSwapListener(): Promise<void> {
     await poolContract.removeAllListeners("Swap");
-    poolContract.on("Swap", async (...args) => {
-        const event = args[args.length - 1];
-        if (!event || !event.transactionHash) {
-            console.warn("Invalid event log received.");
-            return;
-        }
+    poolContract.on("Swap", async (
+        sender: string,
+        recipient: string,
+        amount0: bigint,
+        amount1: bigint,
+        sqrtPriceX96: bigint,
+        liquidity: bigint,
+        tick: number,
+        event: any
+    ) => {
         try {
-            const [
-                sender,
-                recipient,
-                amount0,
-                amount1,
-                sqrtPriceX96,
-                liquidity,
-                tick
-            ] = args as [
-                string,
-                string,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                number
-            ];
-            await handleSwap(sender, recipient, amount0, amount1, sqrtPriceX96, liquidity, tick, event);
+            handleSwap(sender, recipient, amount0, amount1, sqrtPriceX96, liquidity, tick, event);
         } catch (error) {
             console.error("Error in handleSwap:", error);
         }
